@@ -1,0 +1,53 @@
+model{
+	idx[1] <- 1
+    ncp[1] <- 1
+    cp[1] <- round(lambda[1])
+	for (seg in 2:(Nseg-1))
+	{
+        tmp[seg-1] <- cp[seg-1] + round(lambda[seg])
+        cp[seg] <- ifelse(tmp[seg-1]>length(y),length(y),tmp[seg-1])
+    }
+    cp[Nseg] <- length(y)
+
+	for (i in 1:Ndata)
+	{
+		y[i] ~ dnorm(mu[i], tau)
+        mu[i] <- inprod(b[idx[i],1:ARorder], X[i,1:ARorder]) + MeanLevel[idx[i]]
+        idx[i+1] <- ifelse(i==cp[ncp[i]],idx[i]+1,idx[i])
+        ncp[i+1] <- ifelse(i==cp[ncp[i]],ncp[i]+1,ncp[i])
+	}
+
+	# set time segment
+	for (seg in 1:(Nseg-1))
+	{
+        lambda[seg] ~ dunif(1,length(y))
+	}
+
+	# set mean level
+	for (seg in 1:(Nseg))
+	{
+        MeanLevel[seg] ~ dnorm(0,1)
+     
+	}
+
+    # set regression coefficient
+	for (seg in 1:Nseg)
+	{
+		for (AR_i in 1:ARorder)
+		{
+			b[seg,AR_i] ~ dnorm(mu_b[seg,AR_i],2)
+		}
+	}
+    
+    # hyper-parameter for mu_b
+	for (seg in 1:Nseg)
+	{
+        for (AR_i in 1:ARorder)
+		{
+            mu_b[seg,AR_i] ~ dnorm(0,2)
+        }
+	}
+
+	tau ~ dgamma(0.001,0.001)
+	sig <- 1/tau
+}
